@@ -70,23 +70,34 @@ Also, in the `deployspec.yaml`, set the parameter CodebuildImage to `aws/codebui
 The API uses Cognito for authentication. Once the Cognito stacks have been deployed, use these commands to create a new user:
 
 Create a user:
+
 ```aws cognito-idp admin-create-user --user-pool-id <value> --username <value>```
 
+
 Change password:
+
 ```aws cognito-idp admin-set-user-password --user-pool-id <value> --username <value> --password <value>```
 
+
 Login:
+
 ```aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH --auth-parameters USERNAME=<value>,PASSWORD=<value> --client-id <value>```
 
+
 Respond to challenge and get tokenId:
+
 ```aws cognito-idp admin-respond-to-auth-challenge --user-pool-id <value> --client-id <value> --challenge-responses "NEW_PASSWORD=<value>,USERNAME=<value>" --challenge-name NEW_PASSWORD_REQUIRED --session <value>```
 
 
+
 When calling the API, add the tokenID in the headers:
+
 ```Authorization: Bearer TOKEN_ID```
 
 
+
 Next time you login:
+
 ```aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH --auth-parameters USERNAME=<value>,PASSWORD=<value> --client-id <value>```
 
 
