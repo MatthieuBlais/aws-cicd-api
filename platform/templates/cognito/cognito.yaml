@@ -1,0 +1,152 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  Env:
+    Type: String
+  AppName:
+    Type: String
+  AutoVerifiedAttributes:
+    Type: CommaDelimitedList
+    Default: email
+  AuthRoleName:
+    Type: String
+  UnauthRoleName:
+    Type: String
+  UsernameAttributes:
+    Type: CommaDelimitedList
+    Default: email
+
+
+  AllowUnauthenticatedIdentities:
+    Type: String
+    Default: false 
+  MfaConfiguration:
+    Type: String
+    Default: 'OFF'
+  SmsVerificationMessage:
+    Type: String
+    Default: Your verification code is {####}
+  EmailVerificationSubject:
+    Type: String
+    Default: Your verification code     
+  EmailVerificationMessage:
+    Type: String
+    Default: Your verification code is {####}
+  PasswordPolicyMinLength:
+    Type: Number
+    Default: 8
+  UserpoolClientGenerateSecret:
+    Type: String
+    Default: false            
+  UserpoolClientRefreshTokenValidity:
+    Type: Number
+    Default: 30 
+
+Resources:
+  
+  # BEGIN SNS ROLE RESOURCE
+  SNSRole: 
+  # Created to allow the UserPool SMS Config to publish via the Simple Notification Service during MFA Process
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-cognito-sns-role-${Env}"
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Sid: ""
+            Effect: "Allow"
+            Principal: 
+              Service: "cognito-idp.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+            Condition: 
+              StringEquals:
+                sts:ExternalId: !Sub "${AppName}-cognito-role-external-id-${Env}"
+      Policies: 
+        - 
+          PolicyName: !Sub "${AppName}-cognito-sns-${Env}"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - 
+                Effect: "Allow"
+                Action: 
+                  - "sns:Publish"
+                Resource: "*"
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: !Sub "${AppName}-userpool-name-${Env}"
+      Schema: 
+        - Name: email
+          Required: true
+          Mutable: true
+      AutoVerifiedAttributes: !Ref AutoVerifiedAttributes
+      EmailVerificationMessage: !Ref EmailVerificationMessage
+      EmailVerificationSubject: !Ref EmailVerificationSubject
+      Policies:
+        PasswordPolicy:
+          MinimumLength: !Ref PasswordPolicyMinLength
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+      UsernameAttributes: !Ref UsernameAttributes
+      MfaConfiguration: !Ref MfaConfiguration
+      SmsVerificationMessage: !Ref SmsVerificationMessage
+      SmsConfiguration: 
+        SnsCallerArn: !GetAtt SNSRole.Arn
+        ExternalId: !Sub "${AppName}-cognito-role-external-id-${Env}"
+    
+  UserPoolClientWeb:
+    Type: "AWS::Cognito::UserPoolClient"
+    DependsOn: UserPool
+    Properties:
+      ClientName: !Sub "${AppName}-app-clientweb-${Env}"
+      RefreshTokenValidity: !Ref UserpoolClientRefreshTokenValidity
+      UserPoolId: !Ref UserPool
+      ExplicitAuthFlows:
+        - USER_PASSWORD_AUTH
+    
+  IdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties: 
+      IdentityPoolName: !Sub "${AppName}_cognitoidentitypool_${Env}"
+      
+      CognitoIdentityProviders:
+        - ClientId:  !Ref UserPoolClientWeb
+          ProviderName: !Sub
+            - cognito-idp.${region}.amazonaws.com/${client}
+            - { region: !Ref "AWS::Region",  client: !Ref UserPool}
+            
+      AllowUnauthenticatedIdentities: !Ref AllowUnauthenticatedIdentities
+       
+       
+  
+  IdentityPoolRoleMap:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties: 
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+          unauthenticated: !Sub "arn:aws:iam::${AWS::AccountId}:role/${AuthRoleName}-${Env}"
+          authenticated: !Sub "arn:aws:iam::${AWS::AccountId}:role/${UnauthRoleName}-${Env}"
+    DependsOn: IdentityPool
+  
+
+Outputs :
+  
+  IdentityPoolId:
+    Value: !Ref 'IdentityPool'
+    Description:  Id for the identity pool
+  IdentityPoolName:
+    Value: !GetAtt IdentityPool.Name 
+  UserPoolId:
+    Value: !Ref 'UserPool'
+    Description:  Id for the user pool
+  UserPoolName:
+    Value: !Sub "${AppName}-userpool-name-${Env}"
+  AppClientIDWeb:
+    Value: !Ref 'UserPoolClientWeb'
+    Description: The user pool app client id for web

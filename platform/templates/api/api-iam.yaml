@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: API Lambda IAM Role resource stack creation
+
+Parameters:
+
+  AppName:
+    Type: String
+  Env: 
+    Type: String
+
+Resources:
+
+
+  ApiLambdaDefaultRole: 
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-api-lambda-default-role-${Env}"
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Sid: ""
+            Effect: "Allow"
+            Principal: 
+              Service: "lambda.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+
+Outputs:
+  DefaultRole: 
+    Description: Lambda default role
+    Value: !Ref ApiLambdaDefaultRole
+    

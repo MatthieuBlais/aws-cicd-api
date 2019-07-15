@@ -1,0 +1,11 @@
+dev:
+  PROJECT_NAME: "myproject"
+  API_NAME: "NONE"
+  USERPOOL_ID: "ap-southeast-1_xjk7AmNQE"
+  APP_CLIENT_ID: "NONE"
+
+master:
+  PROJECT_NAME: "myproject"
+  API_NAME: "NONE"
+  USERPOOL_ID: "NONE"
+  APP_CLIENT_ID: "NONE"

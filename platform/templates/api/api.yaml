@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: API Gateway resource stack creation using Amplify CLI
+
+Parameters:
+  AppName: 
+    Type: String
+  AuthRoleName: 
+    Type: String
+  Build:
+    Type: String
+  Env: 
+    Type: String
+  UnauthRoleName: 
+    Type: String
+  ApplicationBucketName:
+    Type: String
+  UserPoolId:
+    Type: String
+  GreetingsModuleFunctionName:
+    Type: String
+    Default: ""
+
+
+
+Resources:
+    
+  PolicyAPIGatewayAuth:
+    DependsOn: api
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "${AppName}-policy-api-gateway-auth-${Env}"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: 
+            - 'execute-api:Invoke'
+          Effect: Allow
+          Resource:
+            - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${api}/${Env}/POST/users/*"
+            - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${api}/${Env}/POST/users"
+      Roles:
+      - !Sub "${AuthRoleName}-${Env}"
+
+  PolicyAPIGatewayUnAuth:
+    DependsOn: api
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "${AppName}-policy-api-gateway-unauth-${Env}"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: 
+            - 'execute-api:Invoke'
+          Effect: Allow
+          Resource:
+            - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${api}/${Env}/POST/users/*"
+      Roles:
+      - !Sub "${UnauthRoleName}-${Env}"
+    
+  api:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: ''
+      FailOnWarnings: true
+      Name: !Sub "${AppName}-api-${Env}"
+      Body:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: !Sub "s3://${ApplicationBucketName}/api/${Env}/${Build}/specs.yaml"
+
+  DeploymentAPIGateway:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      Description: The Development stage deployment of your API.
+      RestApiId: !Ref api
+      StageName: !Ref Env
+      
+
+Outputs:
+  ApiName: 
+    Description: API Friendly name
+    Value: !Ref api
+  RootUrl:
+    Description: Root URL of the API gateway
+    Value: !Sub "https://${api}.execute-api.${AWS::Region}.amazonaws.com/${Env}"

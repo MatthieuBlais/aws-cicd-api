@@ -1,0 +1,68 @@
+## COGNITO 
+
+- StackName: <PROJECT_NAME>-cognito-iam
+  TemplateName: platform/templates/cognito/cognito-iam.yaml
+  Type: create_stack
+  Properties:
+    Env: "dev"
+    AuthRoleName: "<PROJECT_NAME>-cognito-auth-role-name"
+    UnauthRoleName: "<PROJECT_NAME>-cognito-unauth-role-name"
+
+- StackName: <PROJECT_NAME>-cognito-userpool
+  TemplateName: platform/templates/cognito/cognito.yaml
+  Type: create_stack
+  Properties:
+    Env: "dev"
+    AppName: "<PROJECT_NAME>"
+    AutoVerifiedAttributes: "email"
+    AuthRoleName: "<PROJECT_NAME>-cognito-auth-role-name"
+    UnauthRoleName: "<PROJECT_NAME>-cognito-unauth-role-name"
+    UsernameAttributes: "email"
+    
+
+## API IAM
+
+- StackName: <PROJECT_NAME>-api-iam
+  TemplateName: platform/templates/api/api-iam.yaml
+  Type: create_stack
+  Properties:
+    Env: "dev"
+    AppName: "<PROJECT_NAME>"
+
+## LAMBDAS
+- StackName: <PROJECT_NAME>-api-lambda-greetings-module
+  TemplateName: platform/templates/api/api-lambdas.yaml
+  Type: create_stack
+  SpecialStack: lambda-api
+  ModuleName: greetings
+  Properties:
+    Env: "dev"
+    Build: 3
+    AppName: "<PROJECT_NAME>"
+    DefaultAPIRoleName: "<PROJECT_NAME>-api-lambda-default-role"
+    AppBucket: "<PROJECT_NAME>-application-bucket"
+    ApiName: "<API_NAME>"
+    FunctionName: "api-greetings-module"
+    Description: "Greetings module for web api"
+    Handler: app.app
+    UserpoolId: "<USERPOOL_ID>"
+    AppClientId: "<APP_CLIENT_ID>"
+
+
+# API
+- StackName: <PROJECT_NAME>-api
+  TemplateName: platform/templates/api/api.yaml
+  Type: create_stack
+  SpecialStack: api
+  Deployment:
+    ApiName: "<API_NAME>"
+  Properties:
+    AppName: "<PROJECT_NAME>"
+    AuthRoleName: "<PROJECT_NAME>-cognito-auth-role-name"
+    Build: "1"
+    Env: "dev"
+    UnauthRoleName: "<PROJECT_NAME>-cognito-unauth-role-name"
+    ApplicationBucketName: "<PROJECT_NAME>-application-bucket"
+    UserPoolId: "<USERPOOL_ID>"
+    GreetingsModuleFunctionName: "api-greetings-module"
+

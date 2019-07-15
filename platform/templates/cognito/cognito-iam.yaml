@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Root stack for the Amplify AWS CloudFormation provider
+
+Parameters:
+  Env:
+    Type: String
+  AuthRoleName: 
+    Default: AuthRoleName
+    Type: String
+  UnauthRoleName: 
+    Default: UnauthRoleName
+    Type: String
+
+Resources:
+
+  AuthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AuthRoleName}-${Env}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: sts:AssumeRoleWithWebIdentity
+          Condition:
+            ForAnyValue:StringLike: {'cognito-identity.amazonaws.com:amr': authenticated}
+          Effect: Allow
+          Principal: 
+            Federated: cognito-identity.amazonaws.com
+          Sid: ''
+        
+  UnauthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${UnauthRoleName}-${Env}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: sts:AssumeRoleWithWebIdentity
+          Condition:
+            ForAnyValue:StringLike: {'cognito-identity.amazonaws.com:amr': unauthenticated}
+          Effect: Allow
+          Principal: {Federated: cognito-identity.amazonaws.com}
+          Sid: ''
+        
+Outputs:
+  AuthRoleArn:
+    Value:
+      Fn::GetAtt: [AuthRole, Arn]
+  AuthRoleName:
+    Value: !Ref AuthRole
+  UnauthRoleArn:
+    Value:
+      Fn::GetAtt: [UnauthRole, Arn]
+  UnauthRoleName:
+    Value: !Ref UnauthRole
